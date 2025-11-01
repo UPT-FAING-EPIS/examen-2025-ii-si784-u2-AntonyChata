@@ -27,16 +27,25 @@ jobs:
         node-version: '18'
     
     - name: Instalar dependencias
-      run: npm install
+      run: npm install --prefer-offline --no-audit
     
     - name: Instalar navegadores Playwright
       run: npx playwright install --with-deps ${{ matrix.browser }}
+      timeout-minutes: 10
+    
+    - name: Verificar configuración de Playwright
+      run: |
+        echo "Verificando configuración:"
+        npx playwright --version
+        ls -la tests/ || echo "No se encontró carpeta tests"
+        cat playwright.config.js | head -20 || echo "No se encontró playwright.config.js"
     
     - name: Ejecutar pruebas E2E
-      run: npx playwright test --project=${{ matrix.browser }}
+      run: npx playwright test --project=${{ matrix.browser }} --timeout=30000
       env:
         CI: true
         PLAYWRIGHT_BROWSERS_PATH: 0
+      timeout-minutes: 60
     
     - name: Generar reporte HTML
       if: always()
@@ -118,16 +127,24 @@ jobs:
         node-version: '18'
     
     - name: Instalar dependencias
-      run: npm install
+      run: npm install --prefer-offline --no-audit
     
     - name: Instalar navegador WebKit (Safari)
       run: npx playwright install --with-deps webkit
+      timeout-minutes: 10
+    
+    - name: Verificar configuración de Playwright
+      run: |
+        echo "Verificando configuración:"
+        npx playwright --version
+        ls -la tests/ || echo "No se encontró carpeta tests"
     
     - name: Ejecutar pruebas E2E en WebKit
-      run: npx playwright test --project=webkit
+      run: npx playwright test --project=webkit --timeout=30000
       env:
         CI: true
         PLAYWRIGHT_BROWSERS_PATH: 0
+      timeout-minutes: 60
     
     - name: Generar reporte HTML
       if: always()

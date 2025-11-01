@@ -40,17 +40,7 @@ jobs:
       if: steps.node-modules-cache.outputs.cache-hit != 'true'
       run: npm ci
     
-    - name: Obtener caché de Playwright
-      uses: actions/cache@v4
-      id: playwright-cache
-      with:
-        path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-playwright-${{ matrix.browser }}-
-    
     - name: Instalar navegadores Playwright
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: npx playwright install --with-deps ${{ matrix.browser }}
     
     - name: Ejecutar pruebas E2E
@@ -137,32 +127,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
-    - name: Obtener caché de node_modules
-      uses: actions/cache@v4
-      id: node-modules-cache
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-modules-
     
     - name: Instalar dependencias
-      if: steps.node-modules-cache.outputs.cache-hit != 'true'
-      run: npm ci
-    
-    - name: Obtener caché de Playwright WebKit
-      uses: actions/cache@v4
-      id: playwright-webkit-cache
-      with:
-        path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-webkit-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-playwright-webkit-
+      run: npm install
     
     - name: Instalar navegador WebKit (Safari)
-      if: steps.playwright-webkit-cache.outputs.cache-hit != 'true'
       run: npx playwright install --with-deps webkit
     
     - name: Ejecutar pruebas E2E en WebKit

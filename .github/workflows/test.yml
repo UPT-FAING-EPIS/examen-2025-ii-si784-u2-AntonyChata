@@ -213,15 +213,73 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     
+    - name: Buscar archivo solución
+      run: |
+        echo "Buscando archivos .sln:"
+        find . -name "*.sln" -type f
+        echo "Buscando ejercicio2.sln específicamente:"
+        find . -name "ejercicio2.sln" -type f
+        echo "Estructura del directorio:"
+        ls -la ejercicio2/ 2>/dev/null || ls -la EJERCICIO2/ 2>/dev/null || echo "No se encontró carpeta ejercicio2"
+    
     - name: Restaurar dependencias
-      run: dotnet restore ejercicio2/ejercicio2.sln
+      run: |
+        # Intentar diferentes rutas posibles
+        if [ -f "ejercicio2/ejercicio2.sln" ]; then
+          echo "Encontrado en: ejercicio2/ejercicio2.sln"
+          dotnet restore ejercicio2/ejercicio2.sln
+        elif [ -f "ejercicio2.sln" ]; then
+          echo "Encontrado en: ejercicio2.sln (raíz)"
+          dotnet restore ejercicio2.sln
+        elif [ -f "EJERCICIO2/ejercicio2.sln" ]; then
+          echo "Encontrado en: EJERCICIO2/ejercicio2.sln"
+          dotnet restore EJERCICIO2/ejercicio2.sln
+        else
+          # Buscar manualmente
+          SOL=$(find . -name "ejercicio2.sln" -type f | head -1)
+          if [ -n "$SOL" ]; then
+            echo "Encontrado en: $SOL"
+            dotnet restore "$SOL"
+          else
+            echo "ERROR: No se encontró ejercicio2.sln en ninguna ubicación"
+            exit 1
+          fi
+        fi
     
     - name: Compilar solución
-      run: dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+      run: |
+        if [ -f "ejercicio2/ejercicio2.sln" ]; then
+          dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+        elif [ -f "ejercicio2.sln" ]; then
+          dotnet build ejercicio2.sln --no-restore -c Release
+        elif [ -f "EJERCICIO2/ejercicio2.sln" ]; then
+          dotnet build EJERCICIO2/ejercicio2.sln --no-restore -c Release
+        else
+          SOL=$(find . -name "ejercicio2.sln" -type f | head -1)
+          if [ -n "$SOL" ]; then
+            dotnet build "$SOL" --no-restore -c Release
+          else
+            echo "ERROR: No se encontró ejercicio2.sln"
+            exit 1
+          fi
+        fi
     
     - name: Ejecutar pruebas unitarias con cobertura
       run: |
-        cd ejercicio2/tests/DocumentConverter.Tests
+        # Buscar el proyecto de pruebas
+        if [ -d "ejercicio2/tests/DocumentConverter.Tests" ]; then
+          cd ejercicio2/tests/DocumentConverter.Tests
+        elif [ -d "EJERCICIO2/tests/DocumentConverter.Tests" ]; then
+          cd EJERCICIO2/tests/DocumentConverter.Tests
+        else
+          TEST_PROJ=$(find . -path "*/tests/DocumentConverter.Tests/*.csproj" | head -1)
+          if [ -n "$TEST_PROJ" ]; then
+            cd "$(dirname "$TEST_PROJ")"
+          else
+            echo "ERROR: No se encontró el proyecto de pruebas"
+            exit 1
+          fi
+        fi
         dotnet test --no-build --configuration Release \
           --collect:"XPlat Code Coverage" \
           --settings:runsettings.xml \
@@ -299,14 +357,54 @@ jobs:
         dotnet-version: '8.0.x'
     
     - name: Restaurar dependencias
-      run: dotnet restore ejercicio2/ejercicio2.sln
+      run: |
+        if [ -f "ejercicio2/ejercicio2.sln" ]; then
+          dotnet restore ejercicio2/ejercicio2.sln
+        elif [ -f "ejercicio2.sln" ]; then
+          dotnet restore ejercicio2.sln
+        elif [ -f "EJERCICIO2/ejercicio2.sln" ]; then
+          dotnet restore EJERCICIO2/ejercicio2.sln
+        else
+          # Buscar proyecto BDD directamente
+          BDD_PROJ=$(find . -path "*/bdd-tests/DocumentConverter.BDD/*.csproj" | head -1)
+          if [ -n "$BDD_PROJ" ]; then
+            dotnet restore "$BDD_PROJ"
+          else
+            echo "ERROR: No se encontró el proyecto BDD"
+            exit 1
+          fi
+        fi
     
     - name: Compilar solución
-      run: dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+      run: |
+        if [ -f "ejercicio2/ejercicio2.sln" ]; then
+          dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+        elif [ -f "ejercicio2.sln" ]; then
+          dotnet build ejercicio2.sln --no-restore -c Release
+        elif [ -f "EJERCICIO2/ejercicio2.sln" ]; then
+          dotnet build EJERCICIO2/ejercicio2.sln --no-restore -c Release
+        else
+          BDD_PROJ=$(find . -path "*/bdd-tests/DocumentConverter.BDD/*.csproj" | head -1)
+          if [ -n "$BDD_PROJ" ]; then
+            dotnet build "$BDD_PROJ" --no-restore -c Release
+          fi
+        fi
     
     - name: Ejecutar pruebas BDD (SpecFlow)
       run: |
-        cd ejercicio2/bdd-tests/DocumentConverter.BDD
+        if [ -d "ejercicio2/bdd-tests/DocumentConverter.BDD" ]; then
+          cd ejercicio2/bdd-tests/DocumentConverter.BDD
+        elif [ -d "EJERCICIO2/bdd-tests/DocumentConverter.BDD" ]; then
+          cd EJERCICIO2/bdd-tests/DocumentConverter.BDD
+        else
+          BDD_PROJ=$(find . -path "*/bdd-tests/DocumentConverter.BDD/*.csproj" | head -1)
+          if [ -n "$BDD_PROJ" ]; then
+            cd "$(dirname "$BDD_PROJ")"
+          else
+            echo "ERROR: No se encontró el proyecto BDD"
+            exit 1
+          fi
+        fi
         dotnet test --no-build --configuration Release \
           --logger:"trx;LogFileName=bdd-tests.trx" \
           --logger:"html;LogFileName=bdd-report.html" \

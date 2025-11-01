@@ -94,7 +94,7 @@ dotnet test tests/DocumentConverter.Tests/DocumentConverter.Tests.csproj `
 dotnet tool install -g dotnet-reportgenerator-globaltool
 ```
 
-### Generar Reporte HTML
+### Generar Reporte HTML XD
 
 ```powershell
 reportgenerator `

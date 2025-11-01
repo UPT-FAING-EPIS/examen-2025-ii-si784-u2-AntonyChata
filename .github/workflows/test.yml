@@ -452,17 +452,38 @@ jobs:
     - name: Checkout código
       uses: actions/checkout@v4
     
-    - name: Descargar reporte de cobertura
+    - name: Descargar reporte de cobertura (si existe)
       uses: actions/download-artifact@v4
       with:
         name: ejercicio2-coverage-report
         path: ejercicio2/coverage-reports/html/
+        if-no-files-found: ignore
+      continue-on-error: true
     
-    - name: Descargar reporte BDD
+    - name: Descargar reporte BDD (si existe)
       uses: actions/download-artifact@v4
       with:
         name: ejercicio2-bdd-report
         path: ejercicio2/bdd-reports/
+        if-no-files-found: ignore
+      continue-on-error: true
+    
+    - name: Verificar qué artefactos se descargaron
+      run: |
+        echo "Verificando artefactos descargados:"
+        if [ -d "ejercicio2/coverage-reports/html" ] && [ "$(ls -A ejercicio2/coverage-reports/html 2>/dev/null)" ]; then
+          echo "✓ Reporte de cobertura encontrado"
+          ls -la ejercicio2/coverage-reports/html/ | head -10
+        else
+          echo "⚠ Reporte de cobertura no disponible"
+        fi
+        
+        if [ -d "ejercicio2/bdd-reports" ] && [ "$(ls -A ejercicio2/bdd-reports 2>/dev/null)" ]; then
+          echo "✓ Reporte BDD encontrado"
+          ls -la ejercicio2/bdd-reports/ | head -10
+        else
+          echo "⚠ Reporte BDD no disponible"
+        fi
     
     - name: Configurar GitHub Pages
       uses: actions/configure-pages@v4
@@ -473,12 +494,21 @@ jobs:
         mkdir -p reports/ejercicio2/coverage
         mkdir -p reports/ejercicio2/bdd
         
-        if [ -d "ejercicio2/coverage-reports/html" ]; then
-          cp -r ejercicio2/coverage-reports/html/* reports/ejercicio2/coverage/ || true
+        # Copiar reportes si existen
+        if [ -d "ejercicio2/coverage-reports/html" ] && [ "$(ls -A ejercicio2/coverage-reports/html 2>/dev/null)" ]; then
+          echo "Copiando reporte de cobertura..."
+          cp -r ejercicio2/coverage-reports/html/* reports/ejercicio2/coverage/ 2>/dev/null || true
+        else
+          echo "⚠ Reporte de cobertura no disponible, creando placeholder"
+          echo "<html><body><h1>Reporte de Cobertura</h1><p>El reporte no está disponible en este momento. Las pruebas pueden haber fallado o el artefacto no se generó.</p></body></html>" > reports/ejercicio2/coverage/index.html
         fi
         
-        if [ -d "ejercicio2/bdd-reports" ]; then
-          cp -r ejercicio2/bdd-reports/* reports/ejercicio2/bdd/ || true
+        if [ -d "ejercicio2/bdd-reports" ] && [ "$(ls -A ejercicio2/bdd-reports 2>/dev/null)" ]; then
+          echo "Copiando reporte BDD..."
+          cp -r ejercicio2/bdd-reports/* reports/ejercicio2/bdd/ 2>/dev/null || true
+        else
+          echo "⚠ Reporte BDD no disponible, creando placeholder"
+          echo "<html><body><h1>Reporte BDD</h1><p>El reporte no está disponible en este momento. Las pruebas pueden haber fallado o el artefacto no se generó.</p></body></html>" > reports/ejercicio2/bdd/index.html
         fi
         
         # Crear página índice
@@ -488,29 +518,49 @@ jobs:
         <head>
             <title>Reportes de Pruebas - Ejercicio 2</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 40px; }
+                body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; }
                 h1 { color: #333; }
+                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
                 .report-link { 
                     display: block; 
                     margin: 20px 0; 
-                    padding: 15px; 
+                    padding: 20px; 
                     background: #f5f5f5; 
                     border-radius: 5px; 
                     text-decoration: none; 
-                    color: #0066cc; 
+                    color: #0066cc;
+                    border-left: 4px solid #0066cc;
+                    transition: all 0.3s;
                 }
-                .report-link:hover { background: #e0e0e0; }
+                .report-link:hover { 
+                    background: #e0e0e0; 
+                    transform: translateX(5px);
+                }
+                .warning { 
+                    padding: 15px; 
+                    background: #fff3cd; 
+                    border-left: 4px solid #ffc107; 
+                    margin: 20px 0;
+                    border-radius: 4px;
+                }
             </style>
         </head>
         <body>
-            <h1>Reportes de Pruebas - Ejercicio 2</h1>
-            <h2>Document Converter Tests</h2>
-            <a href="ejercicio2/coverage/index.html" class="report-link">
-                📊 Reporte de Cobertura de Código
-            </a>
-            <a href="ejercicio2/bdd/bdd-report.html" class="report-link">
-                🧪 Reporte de Pruebas BDD (SpecFlow)
-            </a>
+            <div class="container">
+                <h1>📊 Reportes de Pruebas - Ejercicio 2</h1>
+                <h2>Document Converter Tests</h2>
+                
+                <div class="warning">
+                    <strong>Nota:</strong> Si los reportes no están disponibles, puede que las pruebas hayan fallado o los artefactos no se hayan generado correctamente. Revisa la pestaña "Actions" para más detalles.
+                </div>
+                
+                <a href="ejercicio2/coverage/index.html" class="report-link">
+                    📊 Reporte de Cobertura de Código
+                </a>
+                <a href="ejercicio2/bdd/index.html" class="report-link">
+                    🧪 Reporte de Pruebas BDD (SpecFlow)
+                </a>
+            </div>
         </body>
         </html>
         EOF

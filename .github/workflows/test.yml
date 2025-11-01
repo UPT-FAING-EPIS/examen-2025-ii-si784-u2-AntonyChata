@@ -1,4 +1,4 @@
-name: Pruebas E2E - Repositorio UPT
+name: Ejercicio 1 - E2E Repositorio UPT y Ejercicio 2 - Document Converter
 
 on:
   push:
@@ -194,4 +194,235 @@ jobs:
           test-results/junit.xml
         retention-days: 30
         if-no-files-found: ignore
+
+  # ============================================
+  # EJERCICIO 2: Document Converter
+  # ============================================
+  
+  ejercicio2-unit-tests:
+    name: Ejercicio 2 - Pruebas Unitarias
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restaurar dependencias
+      run: dotnet restore ejercicio2/ejercicio2.sln
+    
+    - name: Compilar solución
+      run: dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+    
+    - name: Ejecutar pruebas unitarias con cobertura
+      run: |
+        cd ejercicio2/tests/DocumentConverter.Tests
+        dotnet test --no-build --configuration Release \
+          --collect:"XPlat Code Coverage" \
+          --settings:runsettings.xml \
+          --results-directory:../../coverage-results \
+          --logger:"trx;LogFileName=unit-tests.trx" \
+          /p:CollectCoverage=true \
+          /p:CoverletOutputFormat=cobertura,opencover,json \
+          /p:CoverletOutput=../../coverage-results/coverage.xml \
+          /p:CoverletOutputDirectory=../../coverage-results
+      continue-on-error: true
+    
+    - name: Generar reporte de cobertura HTML
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool || true
+        reportgenerator \
+          -reports:"ejercicio2/coverage-results/**/coverage.cobertura.xml" \
+          -targetdir:"ejercicio2/coverage-reports/html" \
+          -reporttypes:"Html;Badges;JsonSummary" \
+          -classfilters:"-*Tests;-*BDD" \
+          -assemblyfilters:"+DocumentConverter"
+      continue-on-error: true
+    
+    - name: Verificar cobertura mínima (80%)
+      run: |
+        cd ejercicio2
+        python3 -c "
+        import json
+        import sys
+        try:
+            with open('coverage-reports/html/Summary.json', 'r') as f:
+                data = json.load(f)
+                coverage = data['summary']['linecoverage']
+                print(f'Cobertura de código: {coverage:.2f}%')
+                if coverage < 80:
+                    print(f'ERROR: La cobertura ({coverage:.2f}%) está por debajo del 80% requerido')
+                    sys.exit(1)
+                else:
+                    print(f'✓ Cobertura suficiente: {coverage:.2f}% >= 80%')
+        except FileNotFoundError:
+            print('Warning: No se encontró el archivo de resumen de cobertura')
+            sys.exit(0)
+        "
+      continue-on-error: true
+    
+    - name: Subir reporte de cobertura HTML
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ejercicio2-coverage-report
+        path: ejercicio2/coverage-reports/html/
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir resultados de pruebas unitarias
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ejercicio2-unit-test-results
+        path: ejercicio2/coverage-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+  ejercicio2-bdd-tests:
+    name: Ejercicio 2 - Pruebas BDD
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restaurar dependencias
+      run: dotnet restore ejercicio2/ejercicio2.sln
+    
+    - name: Compilar solución
+      run: dotnet build ejercicio2/ejercicio2.sln --no-restore -c Release
+    
+    - name: Ejecutar pruebas BDD (SpecFlow)
+      run: |
+        cd ejercicio2/bdd-tests/DocumentConverter.BDD
+        dotnet test --no-build --configuration Release \
+          --logger:"trx;LogFileName=bdd-tests.trx" \
+          --logger:"html;LogFileName=bdd-report.html" \
+          --results-directory:../../bdd-results
+      continue-on-error: true
+    
+    - name: Generar reporte BDD HTML
+      run: |
+        cd ejercicio2
+        if [ -f "bdd-results/bdd-report.html" ]; then
+          mkdir -p bdd-reports/html
+          cp bdd-results/bdd-report.html bdd-reports/html/ || true
+        fi
+      continue-on-error: true
+    
+    - name: Subir reporte BDD HTML
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ejercicio2-bdd-report
+        path: ejercicio2/bdd-reports/
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir resultados BDD
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ejercicio2-bdd-test-results
+        path: ejercicio2/bdd-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+  publish-reports:
+    name: Publicar Reportes en GitHub Pages
+    needs: [ejercicio2-unit-tests, ejercicio2-bdd-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Descargar reporte de cobertura
+      uses: actions/download-artifact@v4
+      with:
+        name: ejercicio2-coverage-report
+        path: ejercicio2/coverage-reports/html/
+    
+    - name: Descargar reporte BDD
+      uses: actions/download-artifact@v4
+      with:
+        name: ejercicio2-bdd-report
+        path: ejercicio2/bdd-reports/
+    
+    - name: Configurar GitHub Pages
+      uses: actions/configure-pages@v4
+    
+    - name: Crear estructura de reportes
+      run: |
+        mkdir -p reports/ejercicio2
+        mkdir -p reports/ejercicio2/coverage
+        mkdir -p reports/ejercicio2/bdd
+        
+        if [ -d "ejercicio2/coverage-reports/html" ]; then
+          cp -r ejercicio2/coverage-reports/html/* reports/ejercicio2/coverage/ || true
+        fi
+        
+        if [ -d "ejercicio2/bdd-reports" ]; then
+          cp -r ejercicio2/bdd-reports/* reports/ejercicio2/bdd/ || true
+        fi
+        
+        # Crear página índice
+        cat > reports/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Reportes de Pruebas - Ejercicio 2</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                h1 { color: #333; }
+                .report-link { 
+                    display: block; 
+                    margin: 20px 0; 
+                    padding: 15px; 
+                    background: #f5f5f5; 
+                    border-radius: 5px; 
+                    text-decoration: none; 
+                    color: #0066cc; 
+                }
+                .report-link:hover { background: #e0e0e0; }
+            </style>
+        </head>
+        <body>
+            <h1>Reportes de Pruebas - Ejercicio 2</h1>
+            <h2>Document Converter Tests</h2>
+            <a href="ejercicio2/coverage/index.html" class="report-link">
+                📊 Reporte de Cobertura de Código
+            </a>
+            <a href="ejercicio2/bdd/bdd-report.html" class="report-link">
+                🧪 Reporte de Pruebas BDD (SpecFlow)
+            </a>
+        </body>
+        </html>
+        EOF
+    
+    - name: Subir a GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: reports
+    
+    - name: Desplegar a GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
 

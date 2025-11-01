@@ -1,0 +1,70 @@
+{
+  "reports": [
+    {
+      "type": "Badges",
+      "target": "reports/badges"
+    },
+    {
+      "type": "HtmlChart",
+      "target": "reports/html-chart"
+    },
+    {
+      "type": "HtmlInline",
+      "target": "reports/html-inline"
+    },
+    {
+      "type": "HtmlInline_AzurePipelines",
+      "target": "reports/html-azure-pipelines"
+    },
+    {
+      "type": "HtmlInline_AzurePipelines_Dark",
+      "target": "reports/html-azure-pipelines-dark"
+    },
+    {
+      "type": "HtmlSummary",
+      "target": "reports/html-summary"
+    },
+    {
+      "type": "JsonSummary",
+      "target": "reports/json-summary"
+    },
+    {
+      "type": "Latex",
+      "target": "reports/latex"
+    },
+    {
+      "type": "MarkdownSummary",
+      "target": "reports/markdown-summary"
+    },
+    {
+      "type": "MHtml",
+      "target": "reports/mhtml"
+    },
+    {
+      "type": "PngChart",
+      "target": "reports/png-chart"
+    },
+    {
+      "type": "TeamCitySummary",
+      "target": "reports/teamcity-summary"
+    },
+    {
+      "type": "TextSummary",
+      "target": "reports/text-summary"
+    },
+    {
+      "type": "Xml",
+      "target": "reports/xml"
+    },
+    {
+      "type": "XmlSummary",
+      "target": "reports/xml-summary"
+    }
+  ],
+  "assemblyFilters": [
+    "+DocumentConverter",
+    "-DocumentConverter.Tests",
+    "-DocumentConverter.BDD"
+  ]
+}
+

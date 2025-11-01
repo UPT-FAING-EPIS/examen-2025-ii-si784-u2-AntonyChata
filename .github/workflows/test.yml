@@ -25,20 +25,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
-    - name: Obtener caché de node_modules
-      uses: actions/cache@v4
-      id: node-modules-cache
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-modules-
     
     - name: Instalar dependencias
-      if: steps.node-modules-cache.outputs.cache-hit != 'true'
-      run: npm ci
+      run: npm install
     
     - name: Instalar navegadores Playwright
       run: npx playwright install --with-deps ${{ matrix.browser }}

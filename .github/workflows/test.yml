@@ -268,38 +268,86 @@ jobs:
       run: |
         # Buscar el proyecto de pruebas
         if [ -d "ejercicio2/tests/DocumentConverter.Tests" ]; then
-          cd ejercicio2/tests/DocumentConverter.Tests
+          TEST_DIR="ejercicio2/tests/DocumentConverter.Tests"
+          COVERAGE_DIR="ejercicio2/coverage-results"
         elif [ -d "EJERCICIO2/tests/DocumentConverter.Tests" ]; then
-          cd EJERCICIO2/tests/DocumentConverter.Tests
+          TEST_DIR="EJERCICIO2/tests/DocumentConverter.Tests"
+          COVERAGE_DIR="EJERCICIO2/coverage-results"
         else
           TEST_PROJ=$(find . -path "*/tests/DocumentConverter.Tests/*.csproj" | head -1)
           if [ -n "$TEST_PROJ" ]; then
-            cd "$(dirname "$TEST_PROJ")"
+            TEST_DIR="$(dirname "$TEST_PROJ")"
+            COVERAGE_DIR="$(dirname "$(dirname "$TEST_DIR")")/coverage-results"
           else
             echo "ERROR: No se encontró el proyecto de pruebas"
             exit 1
           fi
         fi
+        
+        cd "$TEST_DIR"
+        mkdir -p "$COVERAGE_DIR" || true
+        
+        echo "Ejecutando pruebas desde: $(pwd)"
+        echo "Guardando cobertura en: $COVERAGE_DIR"
+        
         dotnet test --no-build --configuration Release \
           --collect:"XPlat Code Coverage" \
           --settings:runsettings.xml \
-          --results-directory:../../coverage-results \
+          --results-directory:"$COVERAGE_DIR" \
           --logger:"trx;LogFileName=unit-tests.trx" \
           /p:CollectCoverage=true \
           /p:CoverletOutputFormat=cobertura,opencover,json \
-          /p:CoverletOutput=../../coverage-results/coverage.xml \
-          /p:CoverletOutputDirectory=../../coverage-results
+          /p:CoverletOutput="$COVERAGE_DIR/coverage.xml" \
+          /p:CoverletOutputDirectory="$COVERAGE_DIR"
+      continue-on-error: true
+    
+    - name: Verificar archivos de cobertura generados
+      run: |
+        echo "Buscando archivos de cobertura:"
+        find . -name "coverage.cobertura.xml" -o -name "coverage.xml" | head -10
+        echo ""
+        echo "Estructura de coverage-results:"
+        find . -type d -name "*coverage*" | head -10
+        ls -la ejercicio2/coverage-results/ 2>/dev/null || ls -la EJERCICIO2/coverage-results/ 2>/dev/null || echo "No se encontró coverage-results"
       continue-on-error: true
     
     - name: Generar reporte de cobertura HTML
       run: |
+        # Instalar herramienta
         dotnet tool install -g dotnet-reportgenerator-globaltool || true
-        reportgenerator \
-          -reports:"ejercicio2/coverage-results/**/coverage.cobertura.xml" \
-          -targetdir:"ejercicio2/coverage-reports/html" \
-          -reporttypes:"Html;Badges;JsonSummary" \
-          -classfilters:"-*Tests;-*BDD" \
-          -assemblyfilters:"+DocumentConverter"
+        
+        # Buscar archivos de cobertura
+        COV_FILE=$(find . -name "coverage.cobertura.xml" -o -name "coverage.xml" | head -1)
+        
+        if [ -z "$COV_FILE" ]; then
+          echo "⚠ No se encontró archivo de cobertura, buscando en diferentes ubicaciones..."
+          find . -type f -name "*.xml" | grep -i coverage | head -5
+          echo "Continuando sin reporte HTML..."
+        else
+          echo "Archivo de cobertura encontrado: $COV_FILE"
+          
+          # Determinar directorio de salida
+          if [ -d "ejercicio2" ]; then
+            OUTPUT_DIR="ejercicio2/coverage-reports/html"
+          elif [ -d "EJERCICIO2" ]; then
+            OUTPUT_DIR="EJERCICIO2/coverage-reports/html"
+          else
+            OUTPUT_DIR="coverage-reports/html"
+          fi
+          
+          mkdir -p "$OUTPUT_DIR"
+          
+          echo "Generando reporte HTML en: $OUTPUT_DIR"
+          reportgenerator \
+            -reports:"$COV_FILE" \
+            -targetdir:"$OUTPUT_DIR" \
+            -reporttypes:"Html;Badges;JsonSummary" \
+            -classfilters:"-*Tests;-*BDD" \
+            -assemblyfilters:"+DocumentConverter"
+          
+          echo "Verificando reporte generado:"
+          ls -la "$OUTPUT_DIR" | head -10 || echo "Directorio vacío o no creado"
+        fi
       continue-on-error: true
     
     - name: Verificar cobertura mínima (80%)
@@ -324,12 +372,30 @@ jobs:
         "
       continue-on-error: true
     
+    - name: Verificar si existe el reporte antes de subir
+      run: |
+        echo "Verificando reportes disponibles para subir:"
+        if [ -d "ejercicio2/coverage-reports/html" ]; then
+          echo "✓ Encontrado en: ejercicio2/coverage-reports/html"
+          ls -la ejercicio2/coverage-reports/html/ | head -5
+        elif [ -d "EJERCICIO2/coverage-reports/html" ]; then
+          echo "✓ Encontrado en: EJERCICIO2/coverage-reports/html"
+          ls -la EJERCICIO2/coverage-reports/html/ | head -5
+        else
+          echo "⚠ No se encontró reporte HTML de cobertura"
+          find . -type d -name "*coverage-reports*" 2>/dev/null | head -5
+        fi
+      continue-on-error: true
+    
     - name: Subir reporte de cobertura HTML
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: ejercicio2-coverage-report
-        path: ejercicio2/coverage-reports/html/
+        path: |
+          ejercicio2/coverage-reports/html/
+          EJERCICIO2/coverage-reports/html/
+          coverage-reports/html/
         retention-days: 30
         if-no-files-found: ignore
     

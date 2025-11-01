@@ -16,7 +16,7 @@ Sistema de pruebas end-to-end (E2E) automatizadas para validar la funcionalidad 
 ### Requisitos Cumplidos
 
 ✅ Pruebas de interfaz de usuario para búsqueda de tesis de tecnología  
-✅ Automatización en GitHub Actions con ejecución en múltiples navegadores (Chromium, Firefox, WebKit)  
+✅ Automatización en GitHub Actions con ejecución en múltiples navegadores (Chrome, Firefox, WebKit)  
 ✅ Generación automática de videos de las ejecuciones de pruebas  
 ✅ Soporte para búsqueda en categorías: Web, Base de Datos, Móvil, Inteligencia de Negocios, Inteligencia Artificial
 
@@ -72,8 +72,8 @@ npm run test:headed
 ### Ejecutar pruebas en navegadores específicos
 
 ```bash
-# Solo Chromium
-npx playwright test --project=chromium
+# Solo Chrome
+npx playwright test --project=chrome
 
 # Solo Firefox
 npx playwright test --project=firefox
@@ -115,7 +115,7 @@ Cada prueba verifica que:
 
 El workflow de GitHub Actions está configurado para:
 
-- ✅ Ejecutar pruebas en **Chromium** y **Firefox** (mínimo 2 navegadores requeridos)
+- ✅ Ejecutar pruebas en **Chrome** y **Firefox** (mínimo 2 navegadores requeridos)
 - ✅ Ejecutar pruebas adicionales en **WebKit** (Safari)
 - ✅ Generar **videos** de todas las ejecuciones de pruebas
 - ✅ Capturar **screenshots** cuando las pruebas fallan

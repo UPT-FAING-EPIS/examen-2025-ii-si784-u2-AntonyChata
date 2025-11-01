@@ -8,7 +8,7 @@
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
-    "test:chromium": "playwright test --project=chromium",
+    "test:chrome": "playwright test --project=chrome",
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
     "test:codegen": "playwright codegen https://repositorio.upt.edu.pe",

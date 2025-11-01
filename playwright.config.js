@@ -83,7 +83,7 @@ export default defineConfig({
   /* Configurar proyectos para múltiples navegadores */
   projects: [
     {
-      name: 'chromium',
+      name: 'chrome',
       use: { 
         ...devices['Desktop Chrome'],
         /* Configuración específica para Chrome */

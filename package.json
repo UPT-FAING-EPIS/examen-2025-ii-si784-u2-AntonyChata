@@ -1,0 +1,31 @@
+{
+  "name": "repositorio-upt-tests",
+  "version": "1.0.0",
+  "description": "Pruebas E2E para búsqueda de tesis de tecnología en el repositorio UPT",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:codegen": "playwright codegen https://repositorio.upt.edu.pe",
+    "test:report": "playwright show-report",
+    "test:update-snapshots": "playwright test --update-snapshots",
+    "test:install": "playwright install --with-deps"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "upt"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
+

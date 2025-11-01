@@ -1,0 +1,239 @@
+name: Pruebas E2E - Repositorio UPT
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Obtener caché de node_modules
+      uses: actions/cache@v4
+      id: node-modules-cache
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+    
+    - name: Instalar dependencias
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
+      run: npm ci
+    
+    - name: Obtener caché de Playwright
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-${{ matrix.browser }}-
+    
+    - name: Instalar navegadores Playwright
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: npx playwright install --with-deps ${{ matrix.browser }}
+    
+    - name: Ejecutar pruebas E2E
+      run: npx playwright test --project=${{ matrix.browser }}
+      env:
+        CI: true
+        PLAYWRIGHT_BROWSERS_PATH: 0
+    
+    - name: Generar reporte HTML
+      if: always()
+      run: npx playwright show-report --host 0.0.0.0 || true
+    
+    - name: Verificar resultados
+      if: always()
+      run: |
+        if [ -f test-results/results.json ]; then
+          echo "Resultados guardados exitosamente"
+          cat test-results/results.json | head -20
+        fi
+    
+    - name: Subir videos de pruebas
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: videos-${{ matrix.browser }}
+        path: |
+          test-results/**/*.webm
+          test-results/**/*.mp4
+        retention-days: 30
+        if-no-files-found: ignore
+        compression-level: 6
+    
+    - name: Subir screenshots de fallos
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshots-${{ matrix.browser }}
+        path: |
+          test-results/**/*.png
+          test-results/screenshot-*.png
+          test-results/error-*.png
+        retention-days: 30
+        if-no-files-found: ignore
+        compression-level: 6
+    
+    - name: Subir reporte HTML
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: report-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir trazas de pruebas
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: traces-${{ matrix.browser }}
+        path: test-results/**/*.zip
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir resultados JSON
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-${{ matrix.browser }}
+        path: |
+          test-results/results.json
+          test-results/junit.xml
+        retention-days: 30
+        if-no-files-found: ignore
+
+  test-webkit:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Obtener caché de node_modules
+      uses: actions/cache@v4
+      id: node-modules-cache
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+    
+    - name: Instalar dependencias
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
+      run: npm ci
+    
+    - name: Obtener caché de Playwright WebKit
+      uses: actions/cache@v4
+      id: playwright-webkit-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-webkit-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-webkit-
+    
+    - name: Instalar navegador WebKit (Safari)
+      if: steps.playwright-webkit-cache.outputs.cache-hit != 'true'
+      run: npx playwright install --with-deps webkit
+    
+    - name: Ejecutar pruebas E2E en WebKit
+      run: npx playwright test --project=webkit
+      env:
+        CI: true
+        PLAYWRIGHT_BROWSERS_PATH: 0
+    
+    - name: Generar reporte HTML
+      if: always()
+      run: npx playwright show-report --host 0.0.0.0 || true
+    
+    - name: Verificar resultados
+      if: always()
+      run: |
+        if [ -f test-results/results.json ]; then
+          echo "Resultados guardados exitosamente"
+          cat test-results/results.json | head -20
+        fi
+    
+    - name: Subir videos de pruebas WebKit
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: videos-webkit
+        path: |
+          test-results/**/*.webm
+          test-results/**/*.mp4
+        retention-days: 30
+        if-no-files-found: ignore
+        compression-level: 6
+    
+    - name: Subir screenshots de fallos WebKit
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshots-webkit
+        path: |
+          test-results/**/*.png
+          test-results/screenshot-*.png
+          test-results/error-*.png
+        retention-days: 30
+        if-no-files-found: ignore
+        compression-level: 6
+    
+    - name: Subir reporte HTML WebKit
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: report-webkit
+        path: playwright-report/
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir trazas de pruebas WebKit
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: traces-webkit
+        path: test-results/**/*.zip
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Subir resultados JSON WebKit
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-webkit
+        path: |
+          test-results/results.json
+          test-results/junit.xml
+        retention-days: 30
+        if-no-files-found: ignore
+
